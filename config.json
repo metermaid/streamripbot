@@ -1,4 +1,4 @@
 {
-  "prefix": "YOUR_BOT_PREFIX_HERE",
-  "invite_link": "YOUR_BOT_INVITE_LINK_HERE"
+  "prefix": "streamripper",
+  "invite_link": "https://discord.com/api/oauth2/authorize?client_id=1206701461682126959&permissions=2112&scope=bot"
 }
