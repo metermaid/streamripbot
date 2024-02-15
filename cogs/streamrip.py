@@ -18,14 +18,13 @@ Version: 6.1.0
 """
 import logging
 import os
-import re
 import subprocess
 from dataclasses import dataclass
 
-import discord
+from discord import Interaction, Embed, Message, SelectOption
 from discord.ext import commands
 from discord.ext.commands import Context
-from discord.ui import Select
+from discord.ui import Select, View
 
 from streamrip.client import DeezerClient
 from streamrip.config import Config
@@ -65,7 +64,7 @@ class StreamripInterface():
       rawResults = await self.client.search(mediaType, query, limit=9)
 
       if len(rawResults) == 0:
-         embed = discord.Embed(
+         embed = Embed(
             title="Search Error",
             description=f"Unable to get any results for query: {query}",
             color=0xE02B2B,
@@ -81,7 +80,7 @@ class StreamripInterface():
                               result["link"],
                               result.get("performer", {}).get("name") or result.get("artist", {}).get("name") or result.get("artist") or "") for result in flatResults]
 
-   async def download(self, context: Context, id: int, mediaType: str) -> None:
+   async def download(self, id: int, mediaType: str,msg: Message) -> None:
       """
       :param context: The application command context.
       """
@@ -89,13 +88,6 @@ class StreamripInterface():
          await self.client.login()
 
       LOGGER.info(mediaType)
-
-      embed = discord.Embed(
-         description=f"Awaiting getting media with the id: {id}",
-         color=0xBEBEFE,
-      )
-
-      msg = await context.send(embed=embed)
 
       if mediaType == "track":
          p = PendingSingle(id, self.client, self.config, self.database)
@@ -120,14 +112,14 @@ class StreamripInterface():
       else:
          raise Exception(mediaType)
 
-      await msg.edit(embed=discord.Embed(
+      await msg.edit(embed=Embed(
          description=f"Requested {mediaType} is: {title}",
          color=0xBEBEFE,
       ))
 
       await resolved_media.rip() #rip it...
 
-      await msg.edit(embed=discord.Embed(
+      await msg.edit(embed=Embed(
          description=f"Finished downloading '{title}'. Waiting for Import...",
          color=0xBEBEFE,
       ))
@@ -137,18 +129,17 @@ class StreamripInterface():
 
       subprocess.run(["beet", "-c", CONFIG_PATH, "import", DOWNLOADS_PATH], check=True)
 
-      await msg.edit(embed=discord.Embed(
+      await msg.edit(embed=Embed(
          description=f"Import of '{title}' finished!",
          color=0x9C84EF,
       ))
 
 class Choices(Select):
-   def __init__(self, titles: list[SearchResult], context: Context, mediaType: str, interface: StreamripInterface):
+   def __init__(self, titles: list[SearchResult], mediaType: str, interface: StreamripInterface):
       self.titles = titles
-      self.context = context
       self.mediaType = mediaType
       self.interface = interface
-      options = [discord.SelectOption(label=result.title, value=result.id, description=f"{result.artist}", emoji=EMOJI_LIST[index]) for index,result in enumerate(titles)]
+      options = [SelectOption(label=result.title, value=result.id, description=f"{result.artist}", emoji=EMOJI_LIST[index]) for index,result in enumerate(titles)]
       super().__init__(
          placeholder="Choose which option to download",
          min_values=1,
@@ -156,10 +147,14 @@ class Choices(Select):
          options=options
       )
 
-   async def callback(self, interaction: discord.Interaction):
+   async def callback(self, interaction: Interaction):
+      id = self.values[0]
       await interaction.response.defer()
-      await self.interface.download(context=self.context,id=self.values[0],mediaType=self.mediaType)
-      await interaction.followup.send("Request finished", ephemeral=True)
+      msg = await interaction.followup.send(embed=Embed(
+         description=f"Awaiting getting media with the id: {id}",
+         color=0xBEBEFE
+      ))
+      await self.interface.download(id=id,mediaType=self.mediaType, msg=msg)
 
 class StreamripCog(commands.Cog, name="streamrip"):
    def __init__(self, bot) -> None:
@@ -203,7 +198,7 @@ class StreamripCog(commands.Cog, name="streamrip"):
       await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context)
    
    async def printSearchResults(self, query: str, results: list[SearchResult], mediaType: str, context: Context) -> None:
-      embed = discord.Embed(
+      embed = Embed(
          title=f"Search Results for '{query}'",
          description=f"Returned {len(results)} results:",
          color=0xBEBEFE
@@ -211,8 +206,8 @@ class StreamripCog(commands.Cog, name="streamrip"):
       for index,result in enumerate(results):
          embed.add_field(name=f"{EMOJI_LIST[index]} {result.title}", value=f"{result.artist} (URL: {result.link})", inline=False)
 
-      view = discord.ui.View()
-      view.add_item(Choices(results, context, mediaType, self.interface))
+      view = View()
+      view.add_item(Choices(titles=results, mediaType=mediaType, interface=self.interface))
    
       await context.send(embed=embed, view=view)
 
