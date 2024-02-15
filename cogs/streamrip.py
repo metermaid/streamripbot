@@ -126,7 +126,7 @@ class StreamripInterface():
       # tbqh since we don't really need to know the inner workings the same way as streamrip,
       # fuck it... maybe just run a subroutine...?
 
-      subprocess.run(["beet", "import", DOWNLOADS_PATH, "-c", CONFIG_PATH], check=True)
+      subprocess.run(["beet", "-c", CONFIG_PATH, "import", DOWNLOADS_PATH], check=True)
 
       await msg.edit(embed=discord.Embed(
          description=f"Import of '{title}' finished!",
@@ -152,6 +152,7 @@ class Choices(Select):
    async def callback(self, interaction: discord.Interaction):
       await interaction.response.defer()
       await self.interface.download(context=self.context,id=self.values[0],mediaType=self.mediaType)
+      await interaction.followup.send("Request commenced", ephemeral=True)
 
 class StreamripCog(commands.Cog, name="streamrip"):
    def __init__(self, bot) -> None:
