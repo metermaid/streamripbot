@@ -76,7 +76,10 @@ class StreamripInterface():
          for result in rawResults:
             flatResults.extend(result["data"])
 
-         return [SearchResult(result["id"],result["title"],result["link"],result["artist"]["name"]) for result in flatResults]
+         return [SearchResult(result["id"],
+                              result.get("title") or result.get("name") or "Unknown",
+                              result["link"],
+                              result.get("performer", {}).get("name") or result.get("artist", {}).get("name") or result.get("artist") or "") for result in flatResults]
 
    async def download(self, context: Context, id: int, mediaType: str) -> None:
       """
@@ -106,7 +109,6 @@ class StreamripInterface():
          raise Exception(mediaType)
 
       resolved_media = await p.resolve()
-
       if mediaType == "track":
          title = resolved_media.meta.title
       elif mediaType == "album":
@@ -146,7 +148,7 @@ class Choices(Select):
       self.context = context
       self.mediaType = mediaType
       self.interface = interface
-      options = [discord.SelectOption(label=result.title, value=result.id, description=f"By {result.artist}", emoji=EMOJI_LIST[index]) for index,result in enumerate(titles)]
+      options = [discord.SelectOption(label=result.title, value=result.id, description=f"{result.artist}", emoji=EMOJI_LIST[index]) for index,result in enumerate(titles)]
       super().__init__(
          placeholder="Choose which option to download",
          min_values=1,
@@ -207,7 +209,7 @@ class StreamripCog(commands.Cog, name="streamrip"):
          color=0xBEBEFE
       )
       for index,result in enumerate(results):
-         embed.add_field(name=f"{EMOJI_LIST[index]} {result.title}", value=f"By {result.artist} (URL: {result.link})", inline=False)
+         embed.add_field(name=f"{EMOJI_LIST[index]} {result.title}", value=f"{result.artist} (URL: {result.link})", inline=False)
 
       view = discord.ui.View()
       view.add_item(Choices(results, context, mediaType, self.interface))
