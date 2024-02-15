@@ -77,8 +77,6 @@ class StreamripInterface():
             flatResults.extend(result["data"])
 
          return [SearchResult(result["id"],result["title"],result["link"],result["artist"]["name"]) for result in flatResults]
-      if self.client.logged_in:
-         await self.client.session.close()
 
    async def download(self, context: Context, id: int, mediaType: str) -> None:
       """
@@ -132,8 +130,6 @@ class StreamripInterface():
          description=f"Import of '{title}' finished!",
          color=0x9C84EF,
       ))
-      if self.client.logged_in:
-         await self.client.session.close()
 
 class Choices(Select):
    def __init__(self, titles: list[SearchResult], context: Context, mediaType: str, interface: StreamripInterface):
@@ -152,7 +148,7 @@ class Choices(Select):
    async def callback(self, interaction: discord.Interaction):
       await interaction.response.defer()
       await self.interface.download(context=self.context,id=self.values[0],mediaType=self.mediaType)
-      await interaction.followup.send("Request commenced", ephemeral=True)
+      await interaction.followup.send("Request finished", ephemeral=True)
 
 class StreamripCog(commands.Cog, name="streamrip"):
    def __init__(self, bot) -> None:
