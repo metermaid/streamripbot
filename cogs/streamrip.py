@@ -16,23 +16,24 @@ https://www.deezer.com/us/album/466106885
 
 Version: 6.1.0
 """
-import os
-from dataclasses import dataclass
 import logging
+import os
+import re
+import subprocess
+from dataclasses import dataclass
 
 import discord
 from discord.ext import commands
 from discord.ext.commands import Context
-from discord.ui import Select, View
+from discord.ui import Select
 
 from streamrip.client import DeezerClient
 from streamrip.config import Config
-from streamrip.media import PendingAlbum
+from streamrip.media import PendingSingle, PendingAlbum, PendingPlaylist, PendingArtist
 from streamrip.db import Database,Dummy
 
-import subprocess
-
-emojiList = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"]
+EMOJI_LIST = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"]
+LOGGER = logging.getLogger("discord_bot")
 
 @dataclass
 class SearchResult:
@@ -41,60 +42,23 @@ class SearchResult:
     link: str
     artist: str
 
-class Choices(Select):
-   def __init__(self, titles: list[SearchResult]):
-      self.titles = titles
-      options = [discord.SelectOption(label=result.id, description=result.title, emoji=emojiList[index]) for index,result in enumerate(titles)]
-      super().__init__(
-         placeholder="Choose which option to download",
-         min_values=1,
-         max_values=1,
-         options=options
-      )
-
-   async def callback(self, interaction: discord.Interaction):
-      user_choice = self.values[0]
-
-      result_embed = discord.Embed(
-         title=f"Downloading '{user_choice}'",
-         description=f"Returned {user_choice}....",
-         color=0x9C84EF
-      )
-
-      await interaction.response.edit_message(embed=result_embed, content=None, view=None)
-
-class ChoicesView(View):
-   def __init__(self, titles: list[SearchResult]):
-      super().__init__()
-      self.add_item(Choices(titles))
-
-# Here we name the cog and create a new class for the cog.
-class StreamripCog(commands.Cog, name="streamrip"):
-   def __init__(self, bot) -> None:
-      self.logger = logging.getLogger("discord_bot")
-
-      self.bot = bot
-      config = Config.defaults()
-      self.config = config
-      config.session.database.downloads_enabled = False
+class StreamripInterface():
+   def __init__(self) -> None:
       self.download_path = os.getenv("DOWNLOADS_PATH")
+      config = Config.defaults()
+      config.session.database.downloads_enabled = False
       config.session.downloads.folder = self.download_path
       config.session.deezer.quality = int(os.getenv("QUALITY"))
       config.session.deezer.arl = os.getenv("ARL") # loading it all here because i can't be bothered to properly load the config lol
-      client = DeezerClient(config)
-      self.client = client
-
+      self.config = config
+      self.client = DeezerClient(config)
       self.database = Database(Dummy(),Dummy())
 
-   @commands.hybrid_command(
-      name="album",
-      description="searches and downloads albums",
-   )
-   async def album(self, context: Context, *, query: str) -> None:
-      client = self.client
-      if not client.logged_in:
-         await client.login()
-      rawResults = await client.search("album", query, limit=9)
+   async def search(self, context: Context, mediaType: str, query: str) -> list[SearchResult]:
+      if not self.client.logged_in:
+         await self.client.login()
+
+      rawResults = await self.client.search(mediaType, query, limit=9)
 
       if len(rawResults) == 0:
          embed = discord.Embed(
@@ -108,36 +72,37 @@ class StreamripCog(commands.Cog, name="streamrip"):
          for result in rawResults:
             flatResults.extend(result["data"])
 
-         results = [SearchResult(result["id"],result["title"],result["link"],result["artist"]["name"]) for result in flatResults]
+         return [SearchResult(result["id"],result["title"],result["link"],result["artist"]["name"]) for result in flatResults]
+      if self.client.logged_in:
+         await self.client.session.close()
 
-         embed = discord.Embed(
-            title=f"Search Results for '{query}'",
-            description=f"Returned {len(flatResults)} results:",
-            color=0xBEBEFE
-         )
-         for index,result in enumerate(results):
-            embed.add_field(name=f"{emojiList[index]} {result.title}", value=f"By {result.artist} (URL: {result.link})", inline=False)
-      
-         await context.send(embed=embed, view=ChoicesView(results))
-
-   @commands.hybrid_command(
-      name="url",
-      description="download from the given url",
-   )
-   async def url(self, context: Context, *, albumid: str) -> None:
+   async def download(self, context: Context, id: int, mediaType: str) -> None:
       """
       :param context: The application command context.
       """
+      if not self.client.logged_in:
+         await self.client.login()
 
+      LOGGER.info(mediaType)
 
       embed = discord.Embed(
-         description=f"awaiting getting album {albumid}",
+         description=f"awaiting getting album {id}",
          color=0xBEBEFE,
       )
 
       msg = await context.send(embed=embed)
 
-      p = PendingAlbum(albumid, self.client, self.config, self.database)
+      if mediaType == "track":
+         p = PendingSingle(id, self.client, self.config, self.database)
+      elif mediaType == "album":
+         p = PendingAlbum(id, self.client, self.config, self.database)
+      elif mediaType == "playlist":
+         p = PendingPlaylist(id, self.client, self.config, self.database)
+      elif mediaType == "artist":
+         p = PendingArtist(id, self.client, self.config, self.database)
+      else:
+         raise Exception(media_type)
+
       resolved_album = await p.resolve()
 
       album_name = resolved_album.meta.album
@@ -163,7 +128,80 @@ class StreamripCog(commands.Cog, name="streamrip"):
          description=f"import of {album_name} finished!",
          color=0x9C84EF,
       ))
-      await self.client.session.close()
+      if self.client.logged_in:
+         await self.client.session.close()
+
+class Choices(Select):
+   def __init__(self, titles: list[SearchResult], context: Context, mediaType: str, interface: StreamripInterface):
+      self.titles = titles
+      self.context = context
+      self.mediaType = mediaType
+      self.interface = interface
+      options = [discord.SelectOption(label=result.title, value=result.id, description=f"By {result.artist}", emoji=EMOJI_LIST[index]) for index,result in enumerate(titles)]
+      super().__init__(
+         placeholder="Choose which option to download",
+         min_values=1,
+         max_values=1,
+         options=options
+      )
+
+   async def callback(self, interaction: discord.Interaction):
+      await self.interface.download(context=self.context,id=self.values[0],mediaType=self.mediaType)
+
+class StreamripCog(commands.Cog, name="streamrip"):
+   def __init__(self, bot) -> None:
+      self.bot = bot
+      self.interface = StreamripInterface()
+
+   @commands.hybrid_command(
+      name="track",
+      description="searches and downloads tracks",
+   )
+   async def track(self, context: Context, *, query: str) -> None:
+      mediaType = "track"
+      results = await self.interface.search(context=context, mediaType=mediaType, query=query)
+      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context)
+
+   @commands.hybrid_command(
+      name="album",
+      description="searches and downloads albums",
+   )
+   async def album(self, context: Context, *, query: str) -> None:
+      mediaType = "album"
+      results = await self.interface.search(context=context, mediaType=mediaType, query=query)
+      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context)
+
+   @commands.hybrid_command(
+      name="playlist",
+      description="searches and downloads playlists",
+   )
+   async def playlist(self, context: Context, *, query: str) -> None:
+      mediaType = "playlist"
+      results = await self.interface.search(context=context, mediaType=mediaType, query=query)
+      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context)
+
+   @commands.hybrid_command(
+      name="artist",
+      description="searches and downloads artists",
+   )
+   async def artist(self, context: Context, *, query: str) -> None:
+      mediaType = "artist"
+      results = await self.interface.search(context=context, mediaType=mediaType, query=query)
+      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context)
+   
+   async def printSearchResults(self, query: str, results: list[SearchResult], mediaType: str, context: Context) -> None:
+      embed = discord.Embed(
+         title=f"Search Results for '{query}'",
+         description=f"Returned {len(results)} results:",
+         color=0xBEBEFE
+      )
+      for index,result in enumerate(results):
+         embed.add_field(name=f"{EMOJI_LIST[index]} {result.title}", value=f"By {result.artist} (URL: {result.link})", inline=False)
+
+      view = discord.ui.View()
+      view.add_item(Choices(results, context, mediaType, self.interface))
+   
+      await context.send(embed=embed, view=view)
 
 # And then we finally add the cog to the bot so that it can load, unload, reload and use it's content.
 async def setup(bot) -> None:
