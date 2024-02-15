@@ -92,58 +92,6 @@ class Owner(commands.Cog, name="owner"):
         await context.send(embed=embed)
 
     @commands.hybrid_command(
-        name="load",
-        description="Load a cog",
-    )
-    @app_commands.describe(cog="The name of the cog to load")
-    @commands.is_owner()
-    async def load(self, context: Context, cog: str) -> None:
-        """
-        The bot will load the given cog.
-
-        :param context: The hybrid command context.
-        :param cog: The name of the cog to load.
-        """
-        try:
-            await self.bot.load_extension(f"cogs.{cog}")
-        except Exception:
-            embed = discord.Embed(
-                description=f"Could not load the `{cog}` cog.", color=0xE02B2B
-            )
-            await context.send(embed=embed)
-            return
-        embed = discord.Embed(
-            description=f"Successfully loaded the `{cog}` cog.", color=0xBEBEFE
-        )
-        await context.send(embed=embed)
-
-    @commands.hybrid_command(
-        name="unload",
-        description="Unloads a cog.",
-    )
-    @app_commands.describe(cog="The name of the cog to unload")
-    @commands.is_owner()
-    async def unload(self, context: Context, cog: str) -> None:
-        """
-        The bot will unload the given cog.
-
-        :param context: The hybrid command context.
-        :param cog: The name of the cog to unload.
-        """
-        try:
-            await self.bot.unload_extension(f"cogs.{cog}")
-        except Exception:
-            embed = discord.Embed(
-                description=f"Could not unload the `{cog}` cog.", color=0xE02B2B
-            )
-            await context.send(embed=embed)
-            return
-        embed = discord.Embed(
-            description=f"Successfully unloaded the `{cog}` cog.", color=0xBEBEFE
-        )
-        await context.send(embed=embed)
-
-    @commands.hybrid_command(
         name="reload",
         description="Reloads a cog.",
     )
@@ -168,53 +116,6 @@ class Owner(commands.Cog, name="owner"):
             description=f"Successfully reloaded the `{cog}` cog.", color=0xBEBEFE
         )
         await context.send(embed=embed)
-
-    @commands.hybrid_command(
-        name="shutdown",
-        description="Make the bot shutdown.",
-    )
-    @commands.is_owner()
-    async def shutdown(self, context: Context) -> None:
-        """
-        Shuts down the bot.
-
-        :param context: The hybrid command context.
-        """
-        embed = discord.Embed(description="Shutting down. Bye! :wave:", color=0xBEBEFE)
-        await context.send(embed=embed)
-        await self.bot.close()
-
-    @commands.hybrid_command(
-        name="say",
-        description="The bot will say anything you want.",
-    )
-    @app_commands.describe(message="The message that should be repeated by the bot")
-    @commands.is_owner()
-    async def say(self, context: Context, *, message: str) -> None:
-        """
-        The bot will say anything you want.
-
-        :param context: The hybrid command context.
-        :param message: The message that should be repeated by the bot.
-        """
-        await context.send(message)
-
-    @commands.hybrid_command(
-        name="embed",
-        description="The bot will say anything you want, but within embeds.",
-    )
-    @app_commands.describe(message="The message that should be repeated by the bot")
-    @commands.is_owner()
-    async def embed(self, context: Context, *, message: str) -> None:
-        """
-        The bot will say anything you want, but using embeds.
-
-        :param context: The hybrid command context.
-        :param message: The message that should be repeated by the bot.
-        """
-        embed = discord.Embed(description=message, color=0xBEBEFE)
-        await context.send(embed=embed)
-
 
 async def setup(bot) -> None:
     await bot.add_cog(Owner(bot))

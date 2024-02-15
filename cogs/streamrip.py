@@ -35,6 +35,11 @@ from streamrip.db import Database,Dummy
 EMOJI_LIST = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"]
 LOGGER = logging.getLogger("discord_bot")
 
+DOWNLOADS_PATH = os.getenv("DOWNLOADS_PATH")
+CONFIG_PATH = os.getenv("CONFIG_PATH")
+QUALITY = int(os.getenv("QUALITY"))
+ARL = os.getenv("ARL")
+
 @dataclass
 class SearchResult:
     id: int
@@ -44,12 +49,11 @@ class SearchResult:
 
 class StreamripInterface():
    def __init__(self) -> None:
-      self.download_path = os.getenv("DOWNLOADS_PATH")
       config = Config.defaults()
       config.session.database.downloads_enabled = False
-      config.session.downloads.folder = self.download_path
-      config.session.deezer.quality = int(os.getenv("QUALITY"))
-      config.session.deezer.arl = os.getenv("ARL") # loading it all here because i can't be bothered to properly load the config lol
+      config.session.downloads.folder = DOWNLOADS_PATH
+      config.session.deezer.quality = QUALITY
+      config.session.deezer.arl = ARL # loading it all here because i can't be bothered to properly load the config lol
       self.config = config
       self.client = DeezerClient(config)
       self.database = Database(Dummy(),Dummy())
@@ -86,7 +90,7 @@ class StreamripInterface():
       LOGGER.info(mediaType)
 
       embed = discord.Embed(
-         description=f"awaiting getting album {id}",
+         description=f"Awaiting getting media with the id: {id}",
          color=0xBEBEFE,
       )
 
@@ -103,29 +107,29 @@ class StreamripInterface():
       else:
          raise Exception(media_type)
 
-      resolved_album = await p.resolve()
+      resolved_media = await p.resolve()
 
-      album_name = resolved_album.meta.album
+      title = resolved_media.meta.title
 
       await msg.edit(embed=discord.Embed(
-         description=f"Requested album is: {album_name}",
+         description=f"Requested album is: {title}",
          color=0xBEBEFE,
       ))
 
-      await resolved_album.rip()
+      await resolved_media.rip() #rip it...
 
       await msg.edit(embed=discord.Embed(
-         description=f"Finished downloading {album_name}. Waiting for Import...",
+         description=f"Finished downloading '{title}'. Waiting for Import...",
          color=0xBEBEFE,
       ))
 
       # tbqh since we don't really need to know the inner workings the same way as streamrip,
       # fuck it... maybe just run a subroutine...?
 
-      subprocess.run(["beet", "import", self.download_path, "-q"], check=True)
+      subprocess.run(["beet", "import", DOWNLOADS_PATH, "-c", CONFIG_PATH], check=True)
 
       await msg.edit(embed=discord.Embed(
-         description=f"import of {album_name} finished!",
+         description=f"Import of '{title}' finished!",
          color=0x9C84EF,
       ))
       if self.client.logged_in:
@@ -146,6 +150,7 @@ class Choices(Select):
       )
 
    async def callback(self, interaction: discord.Interaction):
+      await interaction.response.defer()
       await self.interface.download(context=self.context,id=self.values[0],mediaType=self.mediaType)
 
 class StreamripCog(commands.Cog, name="streamrip"):
