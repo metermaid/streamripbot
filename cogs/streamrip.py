@@ -21,6 +21,7 @@ import os
 import subprocess
 from dataclasses import dataclass
 
+from discord import app_commands
 from discord import Interaction, Embed, Message, SelectOption
 from discord.ext import commands
 from discord.ext.commands import Context
@@ -46,7 +47,7 @@ class SearchResult:
     link: str
     artist: str
 
-class StreamripInterface():
+class DeezerInterface():
    def __init__(self) -> None:
       config = Config.defaults()
       config.session.database.downloads_enabled = False
@@ -80,7 +81,7 @@ class StreamripInterface():
                               result["link"],
                               result.get("performer", {}).get("name") or result.get("artist", {}).get("name") or result.get("artist") or "") for result in flatResults]
 
-   async def download(self, id: int, mediaType: str,msg: Message) -> None:
+   async def download(self, id: int, mediaType: str, msg: Message) -> None:
       """
       :param context: The application command context.
       """
@@ -135,7 +136,7 @@ class StreamripInterface():
       ))
 
 class Choices(Select):
-   def __init__(self, titles: list[SearchResult], mediaType: str, interface: StreamripInterface):
+   def __init__(self, titles: list[SearchResult], mediaType: str, interface: DeezerInterface):
       self.titles = titles
       self.mediaType = mediaType
       self.interface = interface
@@ -159,43 +160,57 @@ class Choices(Select):
 class StreamripCog(commands.Cog, name="streamrip"):
    def __init__(self, bot) -> None:
       self.bot = bot
-      self.interface = StreamripInterface()
+      self.deezerinterface = DeezerInterface()
 
    @commands.hybrid_command(
       name="track",
       description="searches and downloads tracks",
    )
-   async def track(self, context: Context, *, query: str) -> None:
+   async def track(self, context: Context, query: str) -> None:
       mediaType = "track"
-      results = await self.interface.search(context=context, mediaType=mediaType, query=query)
+      results = await self.deezerinterface.search(context=context, mediaType=mediaType, query=query)
       await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context)
 
    @commands.hybrid_command(
       name="album",
       description="searches and downloads albums",
    )
-   async def album(self, context: Context, *, query: str) -> None:
+   async def album(self, context: Context, query: str) -> None:
       mediaType = "album"
-      results = await self.interface.search(context=context, mediaType=mediaType, query=query)
+      results = await self.deezerinterface.search(context=context, mediaType=mediaType, query=query)
       await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context)
 
    @commands.hybrid_command(
       name="playlist",
       description="searches and downloads playlists",
    )
-   async def playlist(self, context: Context, *, query: str) -> None:
+   async def playlist(self, context: Context, query: str) -> None:
       mediaType = "playlist"
-      results = await self.interface.search(context=context, mediaType=mediaType, query=query)
+      results = await self.deezerinterface.search(context=context, mediaType=mediaType, query=query)
       await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context)
 
    @commands.hybrid_command(
       name="artist",
       description="searches and downloads artists",
    )
-   async def artist(self, context: Context, *, query: str) -> None:
+   async def artist(self, context: Context, query: str) -> None:
       mediaType = "artist"
-      results = await self.interface.search(context=context, mediaType=mediaType, query=query)
+      results = await self.deezerinterface.search(context=context, mediaType=mediaType, query=query)
       await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context)
+
+   @commands.hybrid_command(
+      name="idlookup",
+      description="when you know the specific id for deezer",
+   )
+   @app_commands.describe(id="The id of the media", mediatype="the type of media")
+   async def idlookup(self, context: Context, id: int, mediatype: str) -> None:
+      embed = Embed(
+         title=f"Downloading {mediatype} with ID: {id}",
+         description=f"Waiting...",
+         color=0xBEBEFE
+      )
+      msg = await context.send(embed=embed)
+      await self.deezerinterface.download(id=id, mediaType=mediatype, msg=msg)
    
    async def printSearchResults(self, query: str, results: list[SearchResult], mediaType: str, context: Context) -> None:
       embed = Embed(
@@ -207,7 +222,7 @@ class StreamripCog(commands.Cog, name="streamrip"):
          embed.add_field(name=f"{EMOJI_LIST[index]} {result.title}", value=f"{result.artist} (URL: {result.link})", inline=False)
 
       view = View()
-      view.add_item(Choices(titles=results, mediaType=mediaType, interface=self.interface))
+      view.add_item(Choices(titles=results, mediaType=mediaType, interface=self.deezerinterface))
    
       await context.send(embed=embed, view=view)
 
