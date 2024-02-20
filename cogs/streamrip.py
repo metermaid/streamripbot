@@ -80,16 +80,17 @@ class StreamripInterface():
          p = PendingArtist(id, self.client, self.config, self.database)
       else:
          raise Exception(mediaType)
-
+      
       resolved_media = await p.resolve()
+      LOGGER.info(resolved_media)
       if mediaType == "track":
          title = resolved_media.meta.title
       elif mediaType == "album":
          title = resolved_media.meta.album
       elif mediaType == "playlist":
-         title = resolved_media.meta.name
+         title = resolved_media.name
       elif mediaType == "artist":
-         title = resolved_media.meta.name
+         title = resolved_media.name
       else:
          raise Exception(mediaType)
 
