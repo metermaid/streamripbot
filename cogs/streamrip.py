@@ -153,8 +153,8 @@ class Choices(Select):
 class StreamripCog(commands.Cog, name="streamrip"):
    def __init__(self, bot) -> None:
       self.bot = bot
-      self.deezer = DeezerInterface()
-      self.soundcloud = SoundcloudInterface()
+      self.deezerinterface = DeezerInterface()
+      self.soundcloudinterface = SoundcloudInterface()
 
    @commands.hybrid_command(
       name="track",
@@ -162,8 +162,8 @@ class StreamripCog(commands.Cog, name="streamrip"):
    )
    async def track(self, context: Context, *, query: str) -> None:
       mediaType = "track"
-      results = await self.deezerinterface.search(context=context, mediaType=mediaType, query=query)
-      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.deezer)
+      results = await self.deezer.search(context=context, mediaType=mediaType, query=query)
+      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.deezerinterface)
 
    @commands.hybrid_command(
       name="album",
@@ -171,8 +171,8 @@ class StreamripCog(commands.Cog, name="streamrip"):
    )
    async def album(self, context: Context, *, query: str) -> None:
       mediaType = "album"
-      results = await self.deezerinterface.search(context=context, mediaType=mediaType, query=query)
-      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.deezer)
+      results = await self.deezer.search(context=context, mediaType=mediaType, query=query)
+      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.deezerinterface)
 
    @commands.hybrid_command(
       name="playlist",
@@ -180,8 +180,8 @@ class StreamripCog(commands.Cog, name="streamrip"):
    )
    async def playlist(self, context: Context, *, query: str) -> None:
       mediaType = "playlist"
-      results = await self.deezerinterface.search(context=context, mediaType=mediaType, query=query)
-      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.deezer)
+      results = await self.deezer.search(context=context, mediaType=mediaType, query=query)
+      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.deezerinterface)
 
    @commands.hybrid_command(
       name="artist",
@@ -189,8 +189,8 @@ class StreamripCog(commands.Cog, name="streamrip"):
    )
    async def artist(self, context: Context, *, query: str) -> None:
       mediaType = "artist"
-      results = await self.deezerinterface.search(context=context, mediaType=mediaType, query=query)
-      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.deezer)
+      results = await self.deezer.search(context=context, mediaType=mediaType, query=query)
+      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.deezerinterface)
 
    @commands.hybrid_command(
       name="soundcloud",
@@ -198,8 +198,8 @@ class StreamripCog(commands.Cog, name="streamrip"):
    )
    async def soundcloud(self, context: Context, *, query: str) -> None:
       mediaType = "track"
-      results = await self.soundcloud.search(context=context, mediaType=mediaType, query=query)
-      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.soundcloud)
+      results = await self.soundcloudinterface.search(context=context, mediaType=mediaType, query=query)
+      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.soundcloudinterface)
 
    @commands.hybrid_command(
       name="idlookup",
@@ -213,7 +213,7 @@ class StreamripCog(commands.Cog, name="streamrip"):
          color=0xBEBEFE
       )
       msg = await context.send(embed=embed)
-      await self.deezer.download(id=id, mediaType=mediatype, msg=msg)
+      await self.deezerinterface.download(id=id, mediaType=mediatype, msg=msg)
    
    async def printSearchResults(self, query: str, results: list[SearchResult], mediaType: str, context: Context, interface: SoundcloudInterface) -> None:
       embed = Embed(
