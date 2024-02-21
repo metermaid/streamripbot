@@ -84,7 +84,7 @@ class StreamripInterface():
          raise Exception(mediaType)
       
       resolved_media = await p.resolve()
-      LOGGER.info(resolved_media)
+
       if mediaType == "track":
          title = resolved_media.meta.title
       elif mediaType == "album":
