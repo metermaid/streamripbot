@@ -35,6 +35,8 @@ class SearchResult:
 class StreamripInterface():
    def __init__(self) -> None:
       config = Config.defaults()
+      config.session.metadata.set_playlist_to_album = False
+      config.session.metadata.renumber_playlist_tracks = False
       config.session.database.downloads_enabled = False
       config.session.downloads.folder = DOWNLOADS_PATH
       self.config = config
