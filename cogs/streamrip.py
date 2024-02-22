@@ -22,6 +22,7 @@ LOGGER = logging.getLogger("discord_bot")
 
 DOWNLOADS_PATH = os.getenv("DOWNLOADS_PATH")
 CONFIG_PATH = os.getenv("CONFIG_PATH")
+STREAMRIP_CONFIG_PATH = os.getenv("STREAMRIP_CONFIG_PATH")
 QUALITY = int(os.getenv("QUALITY"))
 ARL = os.getenv("ARL")
 
@@ -34,11 +35,7 @@ class SearchResult:
 
 class StreamripInterface():
    def __init__(self) -> None:
-      config = Config.defaults()
-      config.session.metadata.set_playlist_to_album = False
-      config.session.metadata.renumber_playlist_tracks = False
-      config.session.database.downloads_enabled = False
-      config.session.downloads.folder = DOWNLOADS_PATH
+      config = Config(STREAMRIP_CONFIG_PATH)
       self.config = config
       self.database = Database(Dummy(),Dummy())
 
@@ -121,14 +118,11 @@ class StreamripInterface():
 class DeezerInterface(StreamripInterface):
    def __init__(self) -> None:
       super().__init__()
-      self.config.session.deezer.quality = QUALITY
-      self.config.session.deezer.arl = ARL # loading it all here because i can't be bothered to properly load the config lol
       self.client = DeezerClient(self.config)
 
 class SoundcloudInterface(StreamripInterface):
    def __init__(self) -> None:
       super().__init__()
-      self.config.session.soundcloud.quality = QUALITY
       self.client = SoundcloudClient(self.config)
 
 class Choices(Select):
