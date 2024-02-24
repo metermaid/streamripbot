@@ -108,7 +108,12 @@ class StreamripInterface():
       # tbqh since we don't really need to know the inner workings the same way as streamrip,
       # fuck it... maybe just run a subroutine...?
 
-      subprocess.run(["beet", "-c", CONFIG_PATH, "import", DOWNLOADS_PATH], check=True)
+      beets_cmd = ["beet", "-c", CONFIG_PATH, "import", DOWNLOADS_PATH]
+
+      if mediaType == "track":
+         beets_cmd.append("-s")
+
+      subprocess.run(beets_cmd, check=True)
 
       await msg.edit(embed=Embed(
          description=f"Import of '{title}' finished!",
