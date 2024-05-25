@@ -79,7 +79,7 @@ class StreamripInterface():
          p = PendingArtist(id, self.client, self.config, self.database)
       else:
          raise Exception(mediaType)
-      
+
       resolved_media = await p.resolve()
 
       if mediaType == "track":
@@ -195,11 +195,20 @@ class StreamripCog(commands.Cog, name="streamrip"):
       await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.deezerinterface)
 
    @commands.hybrid_command(
-      name="soundcloud",
+      name="soundcloud_track",
       description="searches and downloads soundcloud tracks",
    )
-   async def soundcloud(self, context: Context, *, query: str) -> None:
+   async def soundcloud_track(self, context: Context, *, query: str) -> None:
       mediaType = "track"
+      results = await self.soundcloudinterface.search(context=context, mediaType=mediaType, query=query)
+      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.soundcloudinterface)
+
+   @commands.hybrid_command(
+      name="soundcloud_playlist",
+      description="searches and downloads soundcloud playlist",
+   )
+   async def soundcloud_playlist(self, context: Context, *, query: str) -> None:
+      mediaType = "playlist"
       results = await self.soundcloudinterface.search(context=context, mediaType=mediaType, query=query)
       await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.soundcloudinterface)
 
@@ -216,7 +225,7 @@ class StreamripCog(commands.Cog, name="streamrip"):
       )
       msg = await context.send(embed=embed)
       await self.deezerinterface.download(id=id, mediaType=mediatype, msg=msg)
-   
+
    async def printSearchResults(self, query: str, results: list[SearchResult], mediaType: str, context: Context, interface: StreamripInterface) -> None:
       embed = Embed(
          title=f"Search Results for '{query}'",
@@ -228,7 +237,7 @@ class StreamripCog(commands.Cog, name="streamrip"):
 
       view = View()
       view.add_item(Choices(titles=results, mediaType=mediaType, interface=interface))
-   
+
       await context.send(embed=embed, view=view)
 
 # And then we finally add the cog to the bot so that it can load, unload, reload and use it's content.
