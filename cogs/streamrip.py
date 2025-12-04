@@ -59,7 +59,7 @@ class StreamripInterface():
 
          return [SearchResult(str(result['id'])[0:100], # lord wtf soundcloud...
                               result.get("title") or result.get("name") or "Unknown",
-                              result.get("link") or result.get("permalink_url") or result.get("url") or (self.get_artist_url(result.get("id"), result.get("slug")) if mediaType == "artist" else None),
+                              result.get("link") or result.get("permalink_url") or result.get("url") or (self.get_artist_url(result.get("id"), result.get("slug")) if mediaType == "artist" else None) or (await self.get_track_url(result.get("id")) if mediaType == 'track' else None),
                               result.get("performer", {}).get("name") or result.get("artist", {}).get("name") or result.get("artist") or "") for result in flatResults]
 
    async def download(self, id: int, mediaType: str, msg: Message) -> None:
@@ -123,6 +123,9 @@ class StreamripInterface():
    def get_artist_url(self, artist_id: int, artist_slug: str) -> str:
       return None
 
+   async def get_track_url(self, track_id) -> str:
+      return None
+
 class QobuzInterface(StreamripInterface):
    def __init__(self) -> None:
       super().__init__()
@@ -130,6 +133,15 @@ class QobuzInterface(StreamripInterface):
 
    def get_artist_url(self, artist_id, artist_slug):
       return "https://www.qobuz.com/us-en/interpreter/{}/{}".format(artist_slug, artist_id)
+
+   async def get_track_url(self, track_id):
+      status, resp_json = await self.client._request_file_url(track_id, 1, self.client.secret)
+
+      if status != 200:
+         return None
+
+      return resp_json.get("url")
+
 
 class SoundcloudInterface(StreamripInterface):
    def __init__(self) -> None:
