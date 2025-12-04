@@ -12,7 +12,7 @@ from discord.ext import commands
 from discord.ext.commands import Context
 from discord.ui import Select, View
 
-from streamrip.client import SoundcloudClient, QobuzClient
+from streamrip.client import QobuzClient, SoundcloudClient
 from streamrip.config import Config
 from streamrip.media import PendingSingle, PendingAlbum, PendingPlaylist, PendingArtist
 from streamrip.db import Database,Dummy
@@ -120,7 +120,7 @@ class StreamripInterface():
          color=0x9C84EF,
       ))
 
-class QubozInterface(StreamripInterface):
+class QobuzInterface(StreamripInterface):
    def __init__(self) -> None:
       super().__init__()
       self.client = QobuzClient(self.config)
@@ -155,7 +155,7 @@ class Choices(Select):
 class StreamripCog(commands.Cog, name="streamrip"):
    def __init__(self, bot) -> None:
       self.bot = bot
-      self.qubozinterface = QubozInterface()
+      self.qobuzinterface = QobuzInterface()
       self.soundcloudinterface = SoundcloudInterface()
 
    @commands.hybrid_command(
@@ -164,8 +164,8 @@ class StreamripCog(commands.Cog, name="streamrip"):
    )
    async def track(self, context: Context, *, query: str) -> None:
       mediaType = "track"
-      results = await self.qubozinterface.search(context=context, mediaType=mediaType, query=query)
-      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.qubozinterface)
+      results = await self.qobuzinterface.search(context=context, mediaType=mediaType, query=query)
+      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.qobuzinterface)
 
    @commands.hybrid_command(
       name="album",
@@ -173,8 +173,8 @@ class StreamripCog(commands.Cog, name="streamrip"):
    )
    async def album(self, context: Context, *, query: str) -> None:
       mediaType = "album"
-      results = await self.qubozinterface.search(context=context, mediaType=mediaType, query=query)
-      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.qubozinterface)
+      results = await self.qobuzinterface.search(context=context, mediaType=mediaType, query=query)
+      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.qobuzinterface)
 
    @commands.hybrid_command(
       name="playlist",
@@ -182,8 +182,8 @@ class StreamripCog(commands.Cog, name="streamrip"):
    )
    async def playlist(self, context: Context, *, query: str) -> None:
       mediaType = "playlist"
-      results = await self.qubozinterface.search(context=context, mediaType=mediaType, query=query)
-      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.qubozinterface)
+      results = await self.qobuzinterface.search(context=context, mediaType=mediaType, query=query)
+      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.qobuzinterface)
 
    @commands.hybrid_command(
       name="artist",
@@ -191,8 +191,8 @@ class StreamripCog(commands.Cog, name="streamrip"):
    )
    async def artist(self, context: Context, *, query: str) -> None:
       mediaType = "artist"
-      results = await self.qubozinterface.search(context=context, mediaType=mediaType, query=query)
-      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.qubozinterface)
+      results = await self.qobuzinterface.search(context=context, mediaType=mediaType, query=query)
+      await self.printSearchResults(query=query, results=results, mediaType=mediaType, context=context, interface=self.qobuzinterface)
 
    @commands.hybrid_command(
       name="soundcloud_track",
@@ -224,7 +224,7 @@ class StreamripCog(commands.Cog, name="streamrip"):
          color=0xBEBEFE
       )
       msg = await context.send(embed=embed)
-      await self.qubozinterface.download(id=id, mediaType=mediatype, msg=msg)
+      await self.qobuzinterface.download(id=id, mediaType=mediatype, msg=msg)
 
    async def printSearchResults(self, query: str, results: list[SearchResult], mediaType: str, context: Context, interface: StreamripInterface) -> None:
       embed = Embed(

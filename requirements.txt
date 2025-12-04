@@ -2,4 +2,4 @@ aiohttp
 aiosqlite
 discord.py
 python-dotenv
-streamrip>=2.0
+streamrip>=2.1
