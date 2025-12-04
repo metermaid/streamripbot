@@ -55,11 +55,11 @@ class StreamripInterface():
       else:
          flatResults = []
          for result in rawResults:
-            flatResults.extend(result.get("data") or result.get("collection"))
+            flatResults.extend(result.get("data") or result.get("collection") or result.get(mediaType + "s", {}).get("items"))
 
          return [SearchResult(str(result['id'])[0:100], # lord wtf soundcloud...
                               result.get("title") or result.get("name") or "Unknown",
-                              result.get("link") or result.get("permalink_url"),
+                              result.get("link") or result.get("permalink_url") or result.get("url"),
                               result.get("performer", {}).get("name") or result.get("artist", {}).get("name") or result.get("artist") or "") for result in flatResults]
 
    async def download(self, id: int, mediaType: str, msg: Message) -> None:
